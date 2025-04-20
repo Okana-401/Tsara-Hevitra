@@ -1,20 +1,34 @@
-import openai
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import openai
+import os
+from dotenv import load_dotenv
 
-openai.api_key = "YOUR_API_KEY"  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
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
 
-class PromptRequest(BaseModel):
-    prompt: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/get-response")
-async def get_response(request: PromptRequest):
-    prompt = request.prompt
-    response = openai.Completion.create(
-        engine="text-davinci-003",  GPT-4
-        prompt=prompt,
-        max_tokens=150
-    )
-    return {"response": response.choices[0].text.strip()}
+class ChatRequest(BaseModel):
+    messages: list
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=request.messages,
+            max_tokens=1024,
+            temperature=0.8
+        )
+        return {"response": response.choices[0].message['content']}
+    except Exception as e:
+        return {"error": str(e)}
